@@ -110,11 +110,14 @@ function main() {
     }
     console.log("Vertex buffer initialized");
 
-    var mat = mat4.create();
+    var timeElement = document.getElementById("time");
+    var timeNode = document.createTextNode("");
+
+    timeElement.appendChild(timeNode);
 
     var red = 0.0, green = 0.0, blue = 0.0;
     var deltaRed = 1, deltaGreen = 1, deltaBlue = 1;
-    function render() {
+    function render(clock) {
         red += 0.01 * 0.16 * deltaRed;
         green += 0.05 * 0.16 * deltaGreen;
         blue += 0.03 * 0.16 * deltaBlue;
@@ -166,6 +169,8 @@ function main() {
             const vertexCount = 4;
             gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertexCount);
         }
+        clock *= 0.001;
+        timeNode.nodeValue = clock.toFixed(2);
 
         requestAnimationFrame(render);
     };
