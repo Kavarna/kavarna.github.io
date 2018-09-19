@@ -16,8 +16,9 @@ const vsSource = `
 `;
 
 const fsSource = `
+    uniform mediump vec4 uColor;
     void main() {
-        gl_FragColor = vec4(1.0,1.0,1.0,1.0);
+        gl_FragColor = uColor;
     }
 `;
 
@@ -34,7 +35,7 @@ function loadShader(type, source) {
     }
 
     return shader;
-};
+}
 
 function initShaderProgram(vsCode, fsCode) {
     const vertexShader = loadShader(gl.VERTEX_SHADER, vsSource);
@@ -51,7 +52,7 @@ function initShaderProgram(vsCode, fsCode) {
     }
 
     return shaderProgram;
-};
+}
 
 function initBuffers() {
     const positionBuffer = gl.createBuffer();
@@ -98,6 +99,7 @@ function main() {
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, "uProjMat"),
             MVP: gl.getUniformLocation(shaderProgram, "uMVP"),
+            color: gl.getUniformLocation(shaderProgram, "uColor"),
         }
     };
 
@@ -108,28 +110,69 @@ function main() {
     }
     console.log("Vertex buffer initialized");
 
+    var mat = mat4.create();
 
+    var red = 0.0, green = 0.0, blue = 0.0;
+    var deltaRed = 1, deltaGreen = 1, deltaBlue = 1;
+    function render() {
+        red += 0.01 * 0.16 * deltaRed;
+        green += 0.05 * 0.16 * deltaGreen;
+        blue += 0.03 * 0.16 * deltaBlue;
+        if (red > 1.0 || red < 0.0)
+            deltaRed *= -1;
+        if (green > 1.0 || green < 0.0)
+            deltaGreen *= -1;
+        if (blue > 1.0 || blue < 0.0)
+            deltaBlue *= -1;
+        gl.clearColor(red, green, blue, 1.0);
+        gl.clearDepth(1.0);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        const fov = 45 * Math.PI / 180;
+        const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+        const zNear = 0.1;
+        const zFar = 100.0;
+        const projectionMatrix = mat4.create();
+
+        mat4.perspective(projectionMatrix,
+            fov, aspect, zNear, zFar);
+
+        const MVP = mat4.create();
+        mat4.translate(MVP, MVP, [0.0, 0.0, -6.0]);
+
+        {
+            const numComponents = 2;
+            const type = gl.FLOAT;
+            const normalized = false;
+            const stride = 0;
+            const offset = 0;
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertexBuffer);
+            gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition,
+                numComponents, type, normalized, stride, offset);
+            gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+        }
+
+        gl.useProgram(programInfo.program);
+
+        gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
+        gl.uniformMatrix4fv(programInfo.uniformLocations.MVP, false, MVP);
+        gl.uniform4f(programInfo.uniformLocations.color, 1.0 - red, 1.0 - green, 1.0 - blue, 1.0);
+
+        {
+            const offset = 0;
+            const vertexCount = 4;
+            gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertexCount);
+        }
+
+        requestAnimationFrame(render);
+    };
 
     render();
 
-};
-
-var red = 0.0, green = 0.0, blue = 0.0;
-var deltaRed = 1, deltaGreen = 1, deltaBlue = 1;
-function render() {
-    red += 0.01 * 0.16 * deltaRed;
-    green += 0.05 * 0.16 * deltaGreen;
-    blue += 0.03 * 0.16 * deltaBlue;
-    if (red > 1.0 || red < 0.0)
-        deltaRed *= -1;
-    if (green > 1.0 || green < 0.0)
-        deltaGreen *= -1;
-    if (blue > 1.0 || blue < 0.0)
-        deltaBlue *= -1;
-    gl.clearColor(red, green, blue, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    requestAnimationFrame(render);
-};
+}
 
 
 main()
